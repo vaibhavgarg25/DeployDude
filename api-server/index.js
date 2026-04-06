@@ -55,16 +55,22 @@ app.post('/project', async (req, res) => {
             }
         },
         overrides: {
-            containerOverrides: [
-                {
-                    name: 'builder-image',
-                    environment: [
-                        {name:'GIT_REPOSITORY_URL',value: gitURL },
-                        {name:'PROJECT_ID',value: projectSlug },
-                    ]
-                }
-            ]
-        }
+  containerOverrides: [
+    {
+      name: "deployops-container",
+      environment: [
+       
+        { name: "GIT_REPOSITORY_URL", value: gitURL },
+        { name: "PROJECT_ID", value: projectSlug },
+        { name: "REDIS_URL", value: process.env.REDIS_URL },
+        { name: "AWS_REGION", value: "ap-south-1" },
+        { name: "AWS_ACCESS_KEY_ID", value: process.env.AWS_ACCESS_KEY_ID },
+        { name: "AWS_SECRET_ACCESS_KEY", value: process.env.AWS_SECRET_ACCESS_KEY },
+        {name:"S3_BUCKET_NAME",value:process.env.S3_BUCKET_NAME}
+      ]
+    }
+  ]
+}
 
     })
 

@@ -37,7 +37,7 @@ p.stdout.on('data',function(data){
     publishLog(data.toString());
 })
 
-p.stdout.on('data',function(data){
+p.stderr.on('data',function(data){
     console.log(data.toString());
     publishLog(`Error:${data.toString()}`);
 })

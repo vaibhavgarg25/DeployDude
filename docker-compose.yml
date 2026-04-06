@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  api-server:
+    build:
+      context: ./api-server
+      dockerfile: Dockerfile
+    container_name: api-server
+    ports:
+      - "8080:8080"
+      - "9001:9001"  
+    env_file:
+      - ./api-server/.env
+    restart: unless-stopped
+
+  reverse-proxy:
+    build:
+      context: ./s3-reverse-proxy
+      dockerfile: Dockerfile
+    container_name: reverse-proxy
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./s3-reverse-proxy/.env
+    depends_on:
+      - api-server
+    restart: unless-stopped
