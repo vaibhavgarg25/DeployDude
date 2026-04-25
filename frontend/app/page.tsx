@@ -94,11 +94,10 @@ export default function Home() {
 
                 <DeploymentStatus
                   repoUrl={deployment.repoUrl}
-                  slug={deployment.slug}
                   status={deployment.status}
                   logs={deployment.logs}
                   startTime={deployment.startTime}
-                  deployedUrl={deployment.deployedUrl}
+                  // deployedUrl={deployment.deployedUrl}
                 />
 
                 {(deployment.status === "completed" ||

@@ -15,6 +15,10 @@ In PowerShell:
 minikube -p minikube docker-env | Invoke-Expression
 docker build -t deploydude/api-server:latest ./api-server
 docker build -t deploydude/reverse-proxy:latest ./s3-reverse-proxy
+docker build `
+  --build-arg NEXT_PUBLIC_API_URL=http://api.$(minikube ip).nip.io `
+  --build-arg NEXT_PUBLIC_SOCKET_URL=http://socket.$(minikube ip).nip.io `
+  -t deploydude/frontend:latest ./frontend
 ```
 
 ## 3) Create namespace
@@ -38,7 +42,7 @@ kubectl create secret generic api-server-env `
   --from-literal=PUBLIC_PORT=80 `
   --dry-run=client -o yaml | kubectl apply -f -
 
-kubectl create configmap reverse-proxy-env `
+kubectl create secret generic reverse-proxy-env `
   --namespace deploydude `
   --from-env-file=./s3-reverse-proxy/.env `
   --dry-run=client -o yaml | kubectl apply -f -
@@ -51,6 +55,8 @@ kubectl apply -f ./k8s/api-server-deployment.yaml
 kubectl apply -f ./k8s/api-server-service.yaml
 kubectl apply -f ./k8s/reverse-proxy-deployment.yaml
 kubectl apply -f ./k8s/reverse-proxy-service.yaml
+kubectl apply -f ./k8s/frontend-deployment.yaml
+kubectl apply -f ./k8s/frontend-service.yaml
 ```
 
 Set the ingress hosts to your current Minikube IP (avoid hardcoded stale IPs):
@@ -71,6 +77,13 @@ kubectl get ingress -n deploydude
 ```
 
 ## 7) Access
+
+- Frontend in the browser:
+
+```powershell
+$IP = minikube ip
+start "http://frontend.$IP.nip.io"
+```
 
 - Reverse proxy root (default folder):
 
@@ -113,6 +126,8 @@ http://<projectSlug>.<minikube-ip>.nip.io
 ```
 
 No `.localhost` is used anymore.
+
+The frontend image must be rebuilt when the Minikube IP changes, because the browser-side API and socket URLs are baked into the Next.js bundle at build time.
 
 ## Troubleshooting
 

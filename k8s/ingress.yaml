@@ -12,6 +12,18 @@ spec:
   ingressClassName: nginx
   rules:
 
+  # Frontend
+  - host: frontend.192.168.49.2.nip.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 3000
+
   # API server
   - host: api.192.168.49.2.nip.io
     http:

@@ -56,7 +56,7 @@ const ecsClient = new ECSClient({
 
 const config = {
   CLUSTER: process.env.CLUSTER,
-  TASK: process.env.TASK
+  TASK: process.env.TASK,
 }
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*')
@@ -69,8 +69,6 @@ app.use((req, res, next) => {
 
   next()
 })
-  TASK: process.env.TASK,
-}
 
 function buildProjectUrl(projectSlug) {
   const host = `${projectSlug}.${PUBLIC_BASE_DOMAIN}`
@@ -93,41 +91,9 @@ app.post('/project', async (req, res) => {
     return res.status(400).json({ message: 'gitURL is required' })
   }
 
-  const projectSlug = slug ? slug : generateSlug()
+  const projectSlug = slug || generateSlug()
 
   try {
-    const command = new RunTaskCommand({
-      cluster: config.CLUSTER,
-      taskDefinition: config.TASK,
-      launchType: 'FARGATE',
-      count: 1,
-      networkConfiguration: {
-        awsvpcConfiguration: {
-          assignPublicIp: 'ENABLED',
-          subnets: ['subnet-03e103fd64efba6be', 'subnet-02b96840d4c826f61', 'subnet-0fb7b1b472485bc0d'],
-          securityGroups: ['sg-030eb2f6baf61e532'],
-        }
-      },
-      overrides: {
-        containerOverrides: [
-          {
-            name: "deployops-container",
-            environment: [
-
-              { name: "GIT_REPOSITORY_URL", value: gitURL },
-              { name: "PROJECT_ID", value: projectSlug },
-              { name: "REDIS_URL", value: process.env.REDIS_URL },
-              { name: "AWS_REGION", value: "ap-south-1" },
-              { name: "AWS_ACCESS_KEY_ID", value: process.env.AWS_ACCESS_KEY_ID },
-              { name: "AWS_SECRET_ACCESS_KEY", value: process.env.AWS_SECRET_ACCESS_KEY },
-              { name: "S3_BUCKET_NAME", value: process.env.S3_BUCKET_NAME }
-            ]
-          }
-        ]
-      }
-
-    const projectSlug = slug || generateSlug()
-
     const command = new RunTaskCommand({
       cluster: config.CLUSTER,
       taskDefinition: config.TASK,
@@ -147,7 +113,7 @@ app.post('/project', async (req, res) => {
       overrides: {
         containerOverrides: [
           {
-            name: 'deploydude-image',
+            name: 'deployops-container',
             environment: [
               { name: 'GIT_REPOSITORY_URL', value: gitURL },
               { name: 'PROJECT_ID', value: projectSlug },
@@ -164,7 +130,7 @@ app.post('/project', async (req, res) => {
 
     await ecsClient.send(command)
 
-    const url = `http://${projectSlug}.localhost:8000`
+    const url = buildProjectUrl(projectSlug)
 
     console.log(`[API] ECS task queued successfully for project: ${projectSlug}`)
 
