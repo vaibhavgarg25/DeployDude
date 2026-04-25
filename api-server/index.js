@@ -56,6 +56,19 @@ const ecsClient = new ECSClient({
 
 const config = {
   CLUSTER: process.env.CLUSTER,
+  TASK: process.env.TASK
+}
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*')
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204)
+  }
+
+  next()
+})
   TASK: process.env.TASK,
 }
 
@@ -73,15 +86,45 @@ app.use(express.json())
 app.set('trust proxy', true)
 
 app.post('/project', async (req, res) => {
-  try {
-    const { gitURL, slug } = req.body
+  const { gitURL, slug } = req.body
+  console.log(`[API] POST /project received - gitURL: ${gitURL}, slug: ${slug}`)
+  if (!gitURL) {
+    console.log(`[API] Error: gitURL is required`)
+    return res.status(400).json({ message: 'gitURL is required' })
+  }
 
-    if (!gitURL) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'gitURL is required',
-      })
-    }
+  const projectSlug = slug ? slug : generateSlug()
+
+  try {
+    const command = new RunTaskCommand({
+      cluster: config.CLUSTER,
+      taskDefinition: config.TASK,
+      launchType: 'FARGATE',
+      count: 1,
+      networkConfiguration: {
+        awsvpcConfiguration: {
+          assignPublicIp: 'ENABLED',
+          subnets: ['subnet-03e103fd64efba6be', 'subnet-02b96840d4c826f61', 'subnet-0fb7b1b472485bc0d'],
+          securityGroups: ['sg-030eb2f6baf61e532'],
+        }
+      },
+      overrides: {
+        containerOverrides: [
+          {
+            name: "deployops-container",
+            environment: [
+
+              { name: "GIT_REPOSITORY_URL", value: gitURL },
+              { name: "PROJECT_ID", value: projectSlug },
+              { name: "REDIS_URL", value: process.env.REDIS_URL },
+              { name: "AWS_REGION", value: "ap-south-1" },
+              { name: "AWS_ACCESS_KEY_ID", value: process.env.AWS_ACCESS_KEY_ID },
+              { name: "AWS_SECRET_ACCESS_KEY", value: process.env.AWS_SECRET_ACCESS_KEY },
+              { name: "S3_BUCKET_NAME", value: process.env.S3_BUCKET_NAME }
+            ]
+          }
+        ]
+      }
 
     const projectSlug = slug || generateSlug()
 
@@ -121,40 +164,39 @@ app.post('/project', async (req, res) => {
 
     await ecsClient.send(command)
 
+    const url = `http://${projectSlug}.localhost:8000`
+
+    console.log(`[API] ECS task queued successfully for project: ${projectSlug}`)
+
     return res.json({
       status: 'queued',
+      slug: projectSlug,
+      url,
       data: {
+        slug: projectSlug,
         projectSlug,
-        url: buildProjectUrl(projectSlug),
+        url,
       },
     })
   } catch (error) {
-    console.error('Error while running ECS task:', error)
-
-    return res.status(500).json({
-      status: 'error',
-      message: 'Failed to start deployment task',
-    })
+    const message = error instanceof Error ? error.message : 'Failed to queue deployment'
+    console.log(`[API] Error queuing ECS task:`, error)
+    return res.status(500).json({ message })
   }
 })
 
 async function initRedisSubscriber() {
-  try {
-    console.log('Subscribed to logs...')
-
-    await subscriber.psubscribe('logs:*')
-
-    subscriber.on('pmessage', (pattern, channel, message) => {
-      console.log(`Redis message from ${channel}:`, message)
-      io.to(channel).emit('message', message)
-    })
-  } catch (error) {
-    console.error('Redis subscriber error:', error)
-  }
+  console.log(`[REDIS] Subscribing to logs:* pattern`)
+  subscriber.psubscribe('logs:*')
+  subscriber.on('pmessage', (pattern, channel, message) => {
+    console.log(`[REDIS] Message received on ${channel}: ${message.substring(0, 50)}...`)
+    io.to(channel).emit('message', message)
+    console.log(`[SOCKET] Emitted message to ${channel}`)
+  })
 }
 
 initRedisSubscriber()
 
 app.listen(PORT, () => {
-  console.log(`API server running at ${PORT} port`)
+  console.log(`[API] Server running at http://localhost:${PORT}`)
 })
