@@ -33,13 +33,13 @@ pipeline {
 
         stage('Build Reverse Proxy Image') {
             steps {
-                sh 'docker build -t reverse-proxy:latest ./reverse-proxy'
+                sh 'docker build -t reverse-proxy:latest ./s3-reverse-proxy'
             }
         }
 
         stage('Verify Images') {
             steps {
-                sh 'docker images | grep -E "api-server|frontend|reverse-proxy"'
+                sh 'docker images | grep -E "api-server|reverse-proxy"'
             }
         }
     }
