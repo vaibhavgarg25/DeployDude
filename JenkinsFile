@@ -9,31 +9,33 @@ pipeline {
             }
         }
 
+        stage('Check Docker in WSL') {
+            steps {
+                bat 'wsl docker --version'
+            }
+        }
+
         stage('Build API Server Image') {
             steps {
-                bat 'docker build -t api-server:latest ./api-server'
+                bat 'wsl bash -lc "cd /mnt/c/ProgramData/Jenkins/.jenkins/workspace/DeployOps-Build && docker build -t api-server:latest ./api-server"'
             }
         }
 
         stage('Build Frontend Image') {
             steps {
-                bat '''
-                docker build -t frontend:latest ./frontend ^
-                  --build-arg NEXT_PUBLIC_API_URL=http://localhost:8080 ^
-                  --build-arg NEXT_PUBLIC_SOCKET_URL=http://localhost:9001
-                '''
+                bat 'wsl bash -lc "cd /mnt/c/ProgramData/Jenkins/.jenkins/workspace/DeployOps-Build && docker build -t frontend:latest ./frontend --build-arg NEXT_PUBLIC_API_URL=http://localhost:8080 --build-arg NEXT_PUBLIC_SOCKET_URL=http://localhost:9001"'
             }
         }
 
         stage('Build Reverse Proxy Image') {
             steps {
-                bat 'docker build -t reverse-proxy:latest ./reverse-proxy'
+                bat 'wsl bash -lc "cd /mnt/c/ProgramData/Jenkins/.jenkins/workspace/DeployOps-Build && docker build -t reverse-proxy:latest ./reverse-proxy"'
             }
         }
 
         stage('Verify Images') {
             steps {
-                bat 'docker images | findstr "api-server frontend reverse-proxy"'
+                bat 'wsl docker images | findstr "api-server frontend reverse-proxy"'
             }
         }
     }
