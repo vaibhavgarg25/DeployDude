@@ -21,15 +21,15 @@ pipeline {
             }
         }
 
-        stage('Build Frontend Image') {
-            steps {
-                sh '''
-                docker build -t frontend:latest ./frontend \
-                  --build-arg NEXT_PUBLIC_API_URL=http://localhost:8080 \
-                  --build-arg NEXT_PUBLIC_SOCKET_URL=http://localhost:9001
-                '''
-            }
-        }
+        // stage('Build Frontend Image') {
+        //     steps {
+        //         sh '''
+        //         docker build -t frontend:latest ./frontend \
+        //           --build-arg NEXT_PUBLIC_API_URL=http://localhost:8080 \
+        //           --build-arg NEXT_PUBLIC_SOCKET_URL=http://localhost:9001
+        //         '''
+        //     }
+        // }
 
         stage('Build Reverse Proxy Image') {
             steps {
